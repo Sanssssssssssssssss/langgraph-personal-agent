@@ -1,0 +1,24 @@
+Version Update Log Rules
+
+1. Directory:
+- All update records live under the logs folder.
+
+2. File naming:
+- Use: YYYY-MM-DD_vVERSION_short-title.txt
+- Example: 2026-03-25_v0.1.1_vscode_env_and_logging.txt
+
+3. Minimum content for each log file:
+- Version
+- Date
+- Title
+- Completed
+- Files Updated
+- Notes
+
+4. Writing rule:
+- After every meaningful repo update, create one new txt log before commit.
+- The log must state what was completed and which files changed.
+
+5. Helper:
+- Use scripts/new_update_log.ps1 to generate a new template file quickly.
+

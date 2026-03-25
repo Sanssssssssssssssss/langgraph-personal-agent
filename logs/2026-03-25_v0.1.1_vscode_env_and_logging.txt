@@ -1,0 +1,22 @@
+Version: v0.1.1
+Date: 2026-03-25
+Title: vscode_env_and_logging
+
+Completed:
+- Added VS Code workspace configuration for interpreter, tests, launch, and tasks.
+- Added a PowerShell bootstrap script to create the virtual environment and install dependencies.
+- Added a logs folder and a reusable update-log generation script.
+- Inserted a project step before phase 2 for local IDE readiness and version logging discipline.
+- Verified the VS Code-targeted `.venv` by installing dependencies, running tests, and running the CLI.
+
+Files Updated:
+- .gitignore
+- .vscode/settings.json, .vscode/launch.json, .vscode/tasks.json, .vscode/extensions.json
+- .env.example
+- scripts/bootstrap.ps1, scripts/new_update_log.ps1
+- logs/LOGGING_RULES.txt, logs/2026-03-25_v0.1.0_project_initialization.txt, logs/2026-03-25_v0.1.1_vscode_env_and_logging.txt
+- README.md, REQUIREMENTS.md, DECISIONS.md, TASKS.md, STATE.md
+
+Notes:
+- Open the folder in VS Code and run the task "Bootstrap Environment" first.
+- A local `.env` file was also created for immediate use, but it is ignored by Git.

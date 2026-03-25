@@ -43,6 +43,18 @@ py -3 run.py "note list" --show-trace
 py -3 -m unittest discover -s tests -v
 ```
 
+## VS Code 使用
+1. 在 VS Code 打开工作区根目录
+2. 运行任务 `Bootstrap Environment`
+3. 若需要本地环境变量，复制 `.env.example` 为 `.env`
+4. 之后可直接使用：
+- Launch: `Run Personal Agent`
+- Launch: `Run Unit Tests`
+- Task: `Run Agent`
+- Task: `Run Tests`
+
+VS Code 已默认指向 `${workspaceFolder}\\.venv\\Scripts\\python.exe`，并为 Windows 终端设置 UTF-8 输出，避免中文日志和 CLI 输出乱码。
+
 ## 目录
 - `app/cli`：命令行入口
 - `app/graph`：LangGraph 状态、节点、builder
@@ -74,3 +86,9 @@ py -3 -m unittest discover -s tests -v
 - 当前检索使用本地哈希 embedding，重点是把存储与流程骨架跑通。
 - 当前环境下若 `milvus-lite` 不可安装，系统会自动降级到本地文件向量索引，接口保持不变。
 - 当前仅提供单次 CLI 调用，后续再扩展 API/Web UI。
+
+## 版本更新日志
+- 所有版本更新记录放在 `logs/`
+- 每次有效更新新增一个 `txt` 文件
+- 日志至少记录：完成内容、更新文件、备注
+- 可用 `scripts/new_update_log.ps1` 快速生成模板

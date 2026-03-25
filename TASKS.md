@@ -22,6 +22,10 @@
 - 跑通 file ingest 与 retrieval
 - 增加基础 trace 与测试
 - 通过 5 个基础测试场景
+- 增加 VS Code 本地运行配置
+- 增加 logs 版本更新记录机制
+- 补充初始化版本记录和当前更新记录
+- 验证 VS Code 对应的 `.venv`、bootstrap 脚本和测试运行
 
 ## Blocked
 - 无

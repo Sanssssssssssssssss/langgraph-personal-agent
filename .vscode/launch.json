@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Personal Agent",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}\\run.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "note list"
+      ],
+      "envFile": "${workspaceFolder}\\.env"
+    },
+    {
+      "name": "Run Unit Tests",
+      "type": "python",
+      "request": "launch",
+      "module": "unittest",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "discover",
+        "-s",
+        "tests",
+        "-v"
+      ],
+      "envFile": "${workspaceFolder}\\.env"
+    }
+  ]
+}
+

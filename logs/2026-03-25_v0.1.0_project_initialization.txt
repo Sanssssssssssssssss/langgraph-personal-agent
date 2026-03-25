@@ -1,0 +1,20 @@
+Version: v0.1.0
+Date: 2026-03-25
+Title: project_initialization
+
+Completed:
+- Initialized the LangGraph personal agent repository.
+- Added long-term memory project documents.
+- Implemented the first runnable CLI, graph, storage, retrieval, and trace skeleton.
+- Added baseline automated tests.
+- Created and pushed the public GitHub repository.
+
+Files Updated:
+- PROJECT_BRIEF.md, REQUIREMENTS.md, ARCHITECTURE.md, DECISIONS.md, TASKS.md, STATE.md
+- README.md, pyproject.toml, run.py
+- app/cli, app/graph, app/tools, app/storage, app/retrieval, app/observability, app/services
+- tests/test_agent.py
+
+Notes:
+- Milvus local mode is wrapped with a fallback file-based vector index because milvus-lite is unavailable in the current Python 3.13 environment.
+
