@@ -1,0 +1,18 @@
+[project]
+name = "langgraph-personal-agent"
+version = "0.1.0"
+description = "A LangGraph-based personal knowledge and task management agent skeleton."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "langgraph>=0.2.50",
+    "pymilvus>=2.5.5",
+    "pypdf>=6.0.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"

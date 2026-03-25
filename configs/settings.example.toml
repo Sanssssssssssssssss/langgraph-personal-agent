@@ -1,0 +1,7 @@
+[storage]
+sqlite_path = "data/processed/personal_agent.db"
+milvus_path = "data/processed/personal_agent_milvus.db"
+upload_dir = "data/uploads"
+
+[runtime]
+trace_path = "data/benchmarks/trace.log"
