@@ -1,13 +1,13 @@
 # STATE
 
 ## 当前状态
-项目已完成阶段 0 骨架和最小阶段 1 闭环首版实现，并已补齐且验证通过 VS Code 本地运行配置与 `logs/` 更新记录机制。当前环境下向量层采用 `MilvusLiteStore` 兼容封装，在 `milvus-lite` 不可安装时自动回退到本地文件向量索引。
+项目已完成阶段 0 骨架、最小阶段 1 闭环，以及阶段 2 第一刀：交互式 CLI 会话模式和 destructive 确认节点。当前环境下向量层采用 `MilvusLiteStore` 兼容封装，在 `milvus-lite` 不可安装时自动回退到本地文件向量索引。
 
 ## 下一步
-1. 在 VS Code 中运行 `Bootstrap Environment`
-2. 增加交互式 CLI 会话模式
-3. 为高风险写操作加入确认节点
-4. 为 retrieval 增加 metadata/filter 能力
+1. 为 retrieval 增加 metadata/filter 能力
+2. 扩展 destructive 确认策略到可配置层
+3. 评估会话历史持久化和恢复方案
+4. 继续推进阶段 2 的图结构清理和职责拆分
 
 ## 风险
 - 范围膨胀

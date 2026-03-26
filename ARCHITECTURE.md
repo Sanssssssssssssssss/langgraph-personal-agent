@@ -26,6 +26,7 @@
 
 ## LangGraph 主图
 - `detect_intent`：解析用户输入并写入 state
+- `confirmation_node`：处理 destructive 操作确认和确认回复
 - `tool_node`：执行 note/remind/preference/file_ingest
 - `retrieval_node`：执行 retrieval
 - `respond_node`：汇总结果并生成用户输出
@@ -36,9 +37,15 @@
   - `user_input`
   - `intent`
   - `context`
+  - `messages`
   - `retrieval_needed`
+  - `requires_confirmation`
   - `selected_tool`
   - `tool_args`
+  - `awaiting_confirmation`
+  - `pending_action`
+  - `confirmation_prompt`
+  - `confirmation_response`
   - `tool_calls`
   - `memory_ops`
   - `tool_result`
@@ -52,9 +59,14 @@
 - 路由由 graph 控制
 - 存储实现与工具调用解耦
 - 检索链路后续可替换 embedding、reranker、hybrid retrieval
+- destructive 确认优先在 graph state 中表达，不放在 CLI 层硬编码执行逻辑
+
+## CLI 会话原则
+- 单次模式与交互模式共用同一个 `PersonalAgent.invoke(...)` 接口
+- 交互式会话消息只保留在当前终端内存，不写入 SQLite
+- slash 命令只在 CLI 层处理，不进入 graph
 
 ## 调试原则
 - 每次请求记录 request_id
 - 节点执行路径进入 trace
 - 工具调用和错误上下文写入 trace 日志
-

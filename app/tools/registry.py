@@ -10,6 +10,11 @@ from app.storage.vector_store import MilvusLiteStore
 
 
 class ToolRegistry:
+    DESTRUCTIVE_ACTIONS = {
+        ("note", "delete"),
+        ("remind", "cancel"),
+    }
+
     def __init__(
         self,
         sqlite_storage: SQLiteStorage,
@@ -33,6 +38,31 @@ class ToolRegistry:
         if tool_name not in handlers:
             return {"status": "noop", "message": "未命中工具，返回帮助信息。"}
         return handlers[tool_name](args)
+
+    def requires_confirmation(self, tool_name: str, args: dict[str, Any]) -> bool:
+        return (tool_name, args.get("action")) in self.DESTRUCTIVE_ACTIONS
+
+    def build_pending_action(self, tool_name: str, args: dict[str, Any]) -> dict[str, Any] | None:
+        if not self.requires_confirmation(tool_name, args):
+            return None
+
+        action = args.get("action")
+        if tool_name == "note" and action == "delete":
+            note_id = args["id"]
+            description = f"删除笔记 #{note_id}"
+        elif tool_name == "remind" and action == "cancel":
+            reminder_id = args["id"]
+            description = f"取消提醒 #{reminder_id}"
+        else:
+            description = f"执行 {tool_name}.{action}"
+
+        prompt = f"即将{description}。请输入 yes / no（或 确认 / 取消）。"
+        return {
+            "tool": tool_name,
+            "args": dict(args),
+            "prompt": prompt,
+            "cancel_message": f"已取消：{description}。",
+        }
 
     def _handle_note(self, args: dict[str, Any]) -> dict[str, Any]:
         action = args["action"]
@@ -182,4 +212,3 @@ class ToolRegistry:
             "message": "\n".join(lines),
             "results": results,
         }
-

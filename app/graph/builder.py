@@ -3,6 +3,7 @@ from __future__ import annotations
 from langgraph.graph import END, START, StateGraph
 
 from app.graph.nodes.action import execute_retrieval, execute_tool
+from app.graph.nodes.confirmation import handle_confirmation, route_after_confirmation
 from app.graph.nodes.intent import detect_intent, route_after_intent
 from app.graph.nodes.respond import respond
 from app.graph.state import AgentState
@@ -12,7 +13,8 @@ from app.tools.registry import ToolRegistry
 def build_graph(tool_registry: ToolRegistry):
     graph = StateGraph(AgentState)
 
-    graph.add_node("detect_intent", detect_intent)
+    graph.add_node("detect_intent", lambda state: detect_intent(state, tool_registry))
+    graph.add_node("confirmation_node", lambda state: handle_confirmation(state, tool_registry))
     graph.add_node("tool_node", lambda state: execute_tool(state, tool_registry))
     graph.add_node("retrieval_node", lambda state: execute_retrieval(state, tool_registry))
     graph.add_node("respond_node", respond)
@@ -25,6 +27,15 @@ def build_graph(tool_registry: ToolRegistry):
             "tool_node": "tool_node",
             "retrieval_node": "retrieval_node",
             "respond_node": "respond_node",
+            "confirmation_node": "confirmation_node",
+        },
+    )
+    graph.add_conditional_edges(
+        "confirmation_node",
+        route_after_confirmation,
+        {
+            "tool_node": "tool_node",
+            "respond_node": "respond_node",
         },
     )
     graph.add_edge("tool_node", "respond_node")
@@ -32,4 +43,3 @@ def build_graph(tool_registry: ToolRegistry):
     graph.add_edge("respond_node", END)
 
     return graph.compile()
-

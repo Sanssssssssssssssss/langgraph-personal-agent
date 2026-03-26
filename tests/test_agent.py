@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import io
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+from app.cli.main import main as cli_main
 from app.services.agent import PersonalAgent
 
 
@@ -62,6 +66,72 @@ class PersonalAgentTestCase(unittest.TestCase):
         self.assertTrue(state["trace"])
         trace_file = self.base_dir / "data" / "benchmarks" / "trace.log"
         self.assertTrue(trace_file.exists())
+
+    def test_single_shot_delete_requires_confirmation(self) -> None:
+        self.agent.invoke("note add 待删除::阶段2确认节点")
+
+        state = self.agent.invoke("note delete 1")
+        self.assertTrue(state["awaiting_confirmation"])
+        self.assertIn("请输入 yes / no", state["response"])
+
+        list_state = self.agent.invoke("note list")
+        self.assertIn("当前共有 1 条笔记", list_state["response"])
+
+    def test_confirmation_yes_executes_delete(self) -> None:
+        self.agent.invoke("note add 待删除::阶段2确认节点")
+        session = self.agent.new_session()
+
+        prompt_state = self.agent.invoke("note delete 1", session=session)
+        self.assertTrue(prompt_state["awaiting_confirmation"])
+        session = prompt_state["session"]
+
+        confirm_state = self.agent.invoke("yes", session=session)
+        self.assertFalse(confirm_state["awaiting_confirmation"])
+        self.assertIn("已删除笔记 #1", confirm_state["response"])
+
+        list_state = self.agent.invoke("note list")
+        self.assertIn("当前共有 0 条笔记", list_state["response"])
+
+    def test_confirmation_no_cancels_delete(self) -> None:
+        self.agent.invoke("note add 保留::取消删除")
+        session = self.agent.new_session()
+
+        prompt_state = self.agent.invoke("note delete 1", session=session)
+        session = prompt_state["session"]
+
+        cancel_state = self.agent.invoke("取消", session=session)
+        self.assertFalse(cancel_state["awaiting_confirmation"])
+        self.assertIn("已取消", cancel_state["response"])
+
+        list_state = self.agent.invoke("note list")
+        self.assertIn("当前共有 1 条笔记", list_state["response"])
+
+    def test_invalid_confirmation_keeps_pending_action(self) -> None:
+        self.agent.invoke("note add 保留::无效确认")
+        session = self.agent.new_session()
+
+        prompt_state = self.agent.invoke("note delete 1", session=session)
+        session = prompt_state["session"]
+
+        invalid_state = self.agent.invoke("maybe later", session=session)
+        self.assertTrue(invalid_state["awaiting_confirmation"])
+        self.assertIn("请输入 yes / no", invalid_state["response"])
+
+    def test_interactive_cli_slash_commands(self) -> None:
+        with (
+            patch("app.cli.main.PersonalAgent", return_value=self.agent),
+            patch.object(sys, "argv", ["run.py", "--interactive"]),
+            patch("builtins.input", side_effect=["/help", "/trace on", "/clear", "/exit"]),
+            patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
+        ):
+            cli_main()
+
+        output = mock_stdout.getvalue()
+        self.assertIn("进入交互式 CLI", output)
+        self.assertIn("/help", output)
+        self.assertIn("trace 已开启", output)
+        self.assertIn("已清空当前会话内存和待确认动作", output)
+        self.assertIn("已退出交互式会话", output)
 
 
 if __name__ == "__main__":

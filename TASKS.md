@@ -1,11 +1,11 @@
 # TASKS
 
 ## Todo
-- 增加交互式 CLI 会话模式
-- 为高风险写操作加入确认节点
 - 增加更细粒度的 retrieval metadata 和过滤能力
 - 引入真实 embedding 模型替换哈希 embedding
 - 设计 FastAPI 接入层
+- 扩展 destructive 确认策略到可配置层
+- 评估会话历史持久化方案
 
 ## In Progress
 - 无
@@ -26,6 +26,9 @@
 - 增加 logs 版本更新记录机制
 - 补充初始化版本记录和当前更新记录
 - 验证 VS Code 对应的 `.venv`、bootstrap 脚本和测试运行
+- 增加交互式 CLI 会话模式
+- 为高风险写操作加入 graph 级确认节点
+- 通过阶段 2 第一刀的确认流与 REPL 测试
 
 ## Blocked
 - 无

@@ -1,0 +1,22 @@
+Version: v0.2.0
+Date: 2026-03-26
+Title: interactive_cli_and_confirmation
+
+Completed:
+- Added interactive CLI REPL mode with slash commands.
+- Extended PersonalAgent to carry session state in memory for the current terminal session.
+- Added graph-level confirmation handling for destructive actions.
+- Scoped destructive confirmation to note delete and remind cancel.
+- Added tests for confirmation flows, invalid confirmation handling, and interactive CLI commands.
+
+Files Updated:
+- app/cli/main.py
+- app/graph/state.py, app/graph/builder.py, app/graph/nodes/intent.py, app/graph/nodes/confirmation.py
+- app/tools/registry.py
+- app/services/agent.py
+- tests/test_agent.py
+- README.md, REQUIREMENTS.md, ARCHITECTURE.md, DECISIONS.md, TASKS.md, STATE.md
+
+Notes:
+- Single-shot mode now returns a confirmation prompt for destructive actions but does not execute them.
+- To complete a destructive action after confirmation, use the interactive CLI session.

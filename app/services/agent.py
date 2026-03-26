@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import Any, TypedDict
 from pathlib import Path
 from uuid import uuid4
 
@@ -10,6 +11,12 @@ from app.storage.db import SQLiteStorage
 from app.storage.files import FileStorage
 from app.storage.vector_store import MilvusLiteStore
 from app.tools.registry import ToolRegistry
+
+
+class AgentSession(TypedDict, total=False):
+    messages: list[dict[str, str]]
+    pending_confirmation: dict[str, Any] | None
+    show_trace: bool
 
 
 class PersonalAgent:
@@ -29,17 +36,53 @@ class PersonalAgent:
         self.graph = build_graph(self.tool_registry)
         self.tracer = TraceLogger(self.data_dir / "benchmarks" / "trace.log")
 
-    def invoke(self, user_input: str) -> dict:
+    def new_session(self, *, show_trace: bool = False) -> AgentSession:
+        return {
+            "messages": [],
+            "pending_confirmation": None,
+            "show_trace": show_trace,
+        }
+
+    def _normalize_session(self, session: AgentSession | None) -> AgentSession:
+        normalized = self.new_session()
+        if session:
+            normalized["messages"] = list(session.get("messages", []))
+            normalized["pending_confirmation"] = session.get("pending_confirmation")
+            normalized["show_trace"] = session.get("show_trace", False)
+        return normalized
+
+    def _build_next_session(
+        self,
+        session: AgentSession,
+        user_input: str,
+        final_state: dict[str, Any],
+    ) -> AgentSession:
+        messages = list(session.get("messages", []))
+        messages.append({"role": "user", "content": user_input})
+        messages.append({"role": "assistant", "content": final_state.get("response", "")})
+        return {
+            "messages": messages,
+            "pending_confirmation": final_state.get("pending_action") if final_state.get("awaiting_confirmation") else None,
+            "show_trace": session.get("show_trace", False),
+        }
+
+    def invoke(self, user_input: str, session: AgentSession | None = None) -> dict:
+        normalized_session = self._normalize_session(session)
         initial_state = {
             "request_id": str(uuid4()),
             "user_input": user_input,
             "context": {},
+            "messages": normalized_session.get("messages", []),
+            "awaiting_confirmation": bool(normalized_session.get("pending_confirmation")),
+            "pending_action": normalized_session.get("pending_confirmation"),
+            "confirmation_prompt": "",
+            "confirmation_response": "",
             "tool_calls": [],
             "memory_ops": [],
             "errors": [],
             "trace": [],
         }
         final_state = self.graph.invoke(initial_state)
+        final_state["session"] = self._build_next_session(normalized_session, user_input, final_state)
         self.tracer.log(final_state)
         return final_state
-
