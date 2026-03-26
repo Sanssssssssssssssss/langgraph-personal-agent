@@ -59,3 +59,13 @@
 - 日期：2026-03-26
 - 决策：在保留 `file ingest` 的前提下，新增 `file list` 和 `file show <id>` 命令
 - 原因：只有 `retrieve ... | filter:file_id=...` 还不够可用，用户需要先看到已导入文件和对应元数据，filter 能力才真正可用
+
+## D-013 会话历史持久化第一版放在 Agent/Service 层，不直接侵入 graph 节点
+- 日期：2026-03-26
+- 决策：session 持久化使用 SQLite 表和 `SessionStore` 管理，通过 `PersonalAgent` 在 invoke 前后做加载/保存
+- 原因：这样可以先获得稳定恢复能力，又不把 graph 节点与数据库强耦合，后续切 API 或 Web 层也更容易复用
+
+## D-014 graph 先拆出 planning 层，再继续细分执行层
+- 日期：2026-03-26
+- 决策：把 `detect_intent` 和执行规划拆开，新增 `plan_execution` 和单独 routing 函数
+- 原因：当前最主要的问题是输入解析与执行决策混在一起；先拆 planning 层，后续再拆更细的 action/retrieval 责任时风险更小

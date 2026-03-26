@@ -14,6 +14,7 @@ class TraceLogger:
     def log(self, state: AgentState) -> None:
         payload = {
             "request_id": state.get("request_id"),
+            "session_id": state.get("session_id"),
             "user_input": state.get("user_input"),
             "intent": state.get("intent"),
             "tool_calls": state.get("tool_calls", []),
@@ -23,4 +24,3 @@ class TraceLogger:
         }
         with self.trace_path.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(payload, ensure_ascii=False, default=str) + "\n")
-

@@ -3,10 +3,11 @@
 ## Todo
 - 引入真实 embedding 模型替换哈希 embedding
 - 设计 FastAPI 接入层
-- 评估会话历史持久化方案
 - 增加更复杂的 retrieval filter 语法和 metadata 策略
 - 评估 metadata filter 下的召回-过滤顺序优化
 - 增加 file metadata 的更多可视化与排序能力
+- 设计 session 摘要压缩与历史裁剪策略
+- 继续细分 graph execution 层职责
 
 ## In Progress
 - 无
@@ -35,6 +36,9 @@
 - 将 destructive 确认策略切换到配置层
 - 增加 `file list` / `file show` 命令
 - 为确认策略配置和文件清单补齐测试、README、配置文件与版本日志
+- 增加 SQLite 持久化 session 草案
+- 支持持久化会话恢复、会话列表和待确认状态恢复
+- 拆分 graph planning 职责
 
 ## Blocked
 - 无

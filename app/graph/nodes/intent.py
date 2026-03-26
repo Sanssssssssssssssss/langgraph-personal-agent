@@ -5,7 +5,6 @@ from uuid import uuid4
 
 from app.graph.nodes.common import append_trace
 from app.graph.state import AgentState
-from app.tools.registry import ToolRegistry
 
 
 def _parse_kv_payload(payload: str) -> tuple[str, str]:
@@ -140,7 +139,7 @@ def _parse_natural_language(user_input: str) -> tuple[str, dict]:
     return "chat", {"message": user_input}
 
 
-def detect_intent(state: AgentState, tool_registry: ToolRegistry) -> AgentState:
+def detect_intent(state: AgentState) -> AgentState:
     user_input = state["user_input"].strip()
     if state.get("awaiting_confirmation") and state.get("pending_action"):
         pending_action = state["pending_action"]
@@ -160,7 +159,6 @@ def detect_intent(state: AgentState, tool_registry: ToolRegistry) -> AgentState:
             "selected_tool": pending_action["tool"],
             "tool_args": pending_action["args"],
             "retrieval_needed": False,
-            "requires_confirmation": False,
             "confirmation_response": user_input,
             "trace": trace,
         }
@@ -184,7 +182,6 @@ def detect_intent(state: AgentState, tool_registry: ToolRegistry) -> AgentState:
         intent = selected_tool
         retrieval_needed = selected_tool == "retrieval"
 
-    requires_confirmation = tool_registry.requires_confirmation(selected_tool, tool_args)
     trace = append_trace(
         state,
         "detect_intent",
@@ -192,7 +189,6 @@ def detect_intent(state: AgentState, tool_registry: ToolRegistry) -> AgentState:
             "intent": intent,
             "selected_tool": selected_tool,
             "tool_args": tool_args,
-            "requires_confirmation": requires_confirmation,
             "message_count": len(state.get("messages", [])),
         },
     )
@@ -202,19 +198,6 @@ def detect_intent(state: AgentState, tool_registry: ToolRegistry) -> AgentState:
         "selected_tool": selected_tool,
         "tool_args": tool_args,
         "retrieval_needed": retrieval_needed,
-        "requires_confirmation": requires_confirmation,
         "confirmation_response": "",
         "trace": trace,
     }
-
-
-def route_after_intent(state: AgentState) -> str:
-    if state.get("intent") == "confirmation":
-        return "confirmation_node"
-    if state.get("requires_confirmation"):
-        return "confirmation_node"
-    if state.get("retrieval_needed"):
-        return "retrieval_node"
-    if state.get("selected_tool") in {"note", "remind", "preference", "file_ingest"}:
-        return "tool_node"
-    return "respond_node"

@@ -6,6 +6,10 @@ upload_dir = "data/uploads"
 [runtime]
 trace_path = "data/benchmarks/trace.log"
 
+[session]
+auto_persist_interactive = true
+preview_message_limit = 6
+
 [confirmation]
 destructive_actions = [
   "note.delete",

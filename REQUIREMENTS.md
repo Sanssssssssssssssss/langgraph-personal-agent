@@ -12,6 +12,8 @@
 9. 高风险写操作确认：对 destructive 操作先提示确认再执行
 10. 检索 metadata/filter：导入文件后保留最小元数据，并支持按元数据过滤结果
 11. 确认策略配置：destructive 操作范围可通过配置文件调整
+12. 会话历史持久化草案：支持创建、保存、恢复会话与消息历史
+13. graph 职责拆分：输入解析、执行规划、路由和执行责任边界清晰
 
 ## 非功能需求
 - 状态显式可调试
@@ -29,6 +31,7 @@
 - 当前阶段优先保证可运行、可排错、可扩展
 - 在进入更复杂 API/UI 之前，先保证 VS Code 本地开发环境可直接运行
 - 当前 retrieval filter 第一版仅覆盖 `file_id`、`source_name`、`extension`、`media_type`
+- 当前 session 持久化草案第一版只保留消息、确认状态和预览，不做摘要压缩
 
 ## 验收标准
 - 能完成最小多步任务
@@ -41,6 +44,8 @@
 - `retrieve` 能按 metadata 过滤结果，并在结果中回显过滤条件
 - `file list` / `file show` 能帮助用户定位 `file_id` 和文件元数据
 - 可通过配置文件调整 destructive 确认范围
+- 可创建持久化 session，并在重启 agent 后恢复继续执行
+- 待确认动作在持久化 session 中恢复后仍可继续确认
 
 ## 缺失信息与当前假设
 - 仓库名默认 `langgraph-personal-agent`

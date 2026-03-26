@@ -5,6 +5,7 @@ from typing import Any, TypedDict
 
 class AgentState(TypedDict, total=False):
     request_id: str
+    session_id: str
     user_input: str
     intent: str
     context: dict[str, Any]
@@ -24,3 +25,4 @@ class AgentState(TypedDict, total=False):
     response: str
     errors: list[str]
     trace: list[dict[str, Any]]
+    route_target: str

@@ -181,6 +181,10 @@ upload_dir = "data/uploads"
 [runtime]
 trace_path = "data/benchmarks/trace.log"
 
+[session]
+auto_persist_interactive = true
+preview_message_limit = 6
+
 [confirmation]
 destructive_actions = ["note.update", "remind.cancel"]
 """.strip(),
@@ -193,11 +197,43 @@ destructive_actions = ["note.update", "remind.cancel"]
         self.assertTrue(state["awaiting_confirmation"])
         self.assertIn("note.update", state["pending_action"]["prompt"])
 
+    def test_persisted_session_can_resume_after_restart(self) -> None:
+        session = self.agent.new_session(persist=True, title="Persisted Session")
+        first_state = self.agent.invoke("note add Persisted::resume", session=session)
+        session_id = first_state["session"]["session_id"]
+
+        restarted_agent = PersonalAgent(base_dir=self.base_dir)
+        loaded = restarted_agent.load_session(session_id)
+        self.assertTrue(loaded["persisted"])
+        self.assertEqual(session_id, loaded["session_id"])
+        self.assertTrue(loaded["messages"])
+
+        resumed_state = restarted_agent.invoke("note list", session=loaded)
+        self.assertEqual(1, len(resumed_state["tool_result"]["records"]))
+        self.assertEqual(session_id, resumed_state["session"]["session_id"])
+
+    def test_pending_confirmation_persists_across_restart(self) -> None:
+        self.agent.invoke("note add 待确认::持久化恢复")
+        session = self.agent.new_session(persist=True, title="Confirmation Session")
+
+        prompt_state = self.agent.invoke("note delete 1", session=session)
+        session_id = prompt_state["session"]["session_id"]
+        self.assertTrue(prompt_state["awaiting_confirmation"])
+
+        restarted_agent = PersonalAgent(base_dir=self.base_dir)
+        loaded = restarted_agent.load_session(session_id)
+        self.assertTrue(loaded["pending_confirmation"])
+
+        confirm_state = restarted_agent.invoke("yes", session=loaded)
+        self.assertFalse(confirm_state["awaiting_confirmation"])
+        list_state = restarted_agent.invoke("note list")
+        self.assertEqual([], list_state["tool_result"]["records"])
+
     def test_interactive_cli_slash_commands(self) -> None:
         with (
             patch("app.cli.main.PersonalAgent", return_value=self.agent),
             patch.object(sys, "argv", ["run.py", "--interactive"]),
-            patch("builtins.input", side_effect=["/help", "/trace on", "/clear", "/exit"]),
+            patch("builtins.input", side_effect=["/help", "/trace on", "/session info", "/clear", "/exit"]),
             patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
         ):
             cli_main()
@@ -206,8 +242,22 @@ destructive_actions = ["note.update", "remind.cancel"]
         self.assertIn("进入交互式 CLI", output)
         self.assertIn("/help", output)
         self.assertIn("trace 已开启", output)
+        self.assertIn("[session]", output)
         self.assertIn("已清空当前会话内存和待确认动作", output)
         self.assertIn("已退出交互式会话", output)
+
+    def test_interactive_cli_session_list(self) -> None:
+        self.agent.new_session(persist=True, title="Listed Session")
+        with (
+            patch("app.cli.main.PersonalAgent", return_value=self.agent),
+            patch.object(sys, "argv", ["run.py", "--interactive"]),
+            patch("builtins.input", side_effect=["/session list", "/exit"]),
+            patch("sys.stdout", new_callable=io.StringIO) as mock_stdout,
+        ):
+            cli_main()
+
+        output = mock_stdout.getvalue()
+        self.assertIn("[sessions]", output)
 
 
 if __name__ == "__main__":

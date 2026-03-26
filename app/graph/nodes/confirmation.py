@@ -104,9 +104,3 @@ def handle_confirmation(state: AgentState, tool_registry: ToolRegistry) -> Agent
         "confirmation_response": "",
         "trace": trace,
     }
-
-
-def route_after_confirmation(state: AgentState) -> str:
-    if state.get("confirmation_response") == "confirmed":
-        return "tool_node"
-    return "respond_node"

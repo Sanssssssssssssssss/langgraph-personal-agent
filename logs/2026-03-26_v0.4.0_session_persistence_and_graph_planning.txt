@@ -1,0 +1,37 @@
+版本：v0.4.0
+日期：2026-03-26
+
+本次完成内容
+- 增加会话历史持久化草案，实现 SQLite 持久化会话、消息和快照
+- CLI 支持创建持久化会话、列出会话、加载会话、恢复会话
+- 将 graph 从“解析输入即决定路由”拆成“detect_intent + plan_execution + routing”
+- trace 增加 session_id，上下文更清晰
+- 补齐会话恢复与确认恢复的自动化测试
+
+主要更新文件
+- `app/services/session_store.py`
+  - 新增会话持久化服务
+- `app/storage/db.py`
+  - 新增 sessions / session_messages / session_snapshots 表及相关读写
+- `app/services/agent.py`
+  - 接入持久化 session 生命周期
+- `app/cli/main.py`
+  - 新增 `--persist-session`、`--session-id` 和 `/session ...` 命令
+- `app/graph/nodes/planning.py`
+  - 新增执行规划节点
+- `app/graph/routing.py`
+  - 新增 graph 路由函数
+- `app/graph/builder.py`
+  - graph 连接调整为 detect -> plan -> route -> execute/respond
+- `app/graph/nodes/intent.py`
+  - 只负责解析输入，不再直接做执行规划
+- `app/graph/state.py`
+  - 增加 `session_id`、`route_target`
+- `app/observability/tracer.py`
+  - trace 增加 session_id
+- `tests/test_agent.py`
+  - 新增 session 恢复和待确认恢复测试
+
+备注
+- 第一版 session 持久化以“恢复能力优先”，尚未加入摘要压缩和历史裁剪
+- graph 职责拆分后，后续再加 API/Web 层会更容易复用 planning 层

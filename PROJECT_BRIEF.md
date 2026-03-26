@@ -6,7 +6,7 @@
 ## 范围
 - 阶段 0：项目骨架、目录、状态设计、主图草案、存储边界、调试方案、长期记忆机制
 - 阶段 1：CLI、最小 graph、SQLite、Milvus Lite 兼容封装、文件系统、基础工具闭环
-- 阶段 2：交互式 CLI、destructive 确认节点、retrieval metadata/filter、文件清单能力、配置化确认策略
+- 阶段 2：交互式 CLI、destructive 确认节点、retrieval metadata/filter、文件清单能力、配置化确认策略、会话历史持久化草案、graph planning 职责拆分
 
 ## 成功标准
 - 有可运行的最小 agent
@@ -25,8 +25,9 @@
 
 ## 当前交付物
 - 可运行的 CLI 和 REPL
-- LangGraph 主图
+- LangGraph 主图与 planning 拆分
 - 基础工具系统
 - SQLite 和向量索引兼容封装
 - 文件导入、文件清单、知识检索
+- 会话历史持久化草案
 - 项目长期记忆文档

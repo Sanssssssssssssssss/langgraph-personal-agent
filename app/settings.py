@@ -18,6 +18,12 @@ class RuntimeSettings:
 
 
 @dataclass(frozen=True)
+class SessionSettings:
+    auto_persist_interactive: bool = True
+    preview_message_limit: int = 6
+
+
+@dataclass(frozen=True)
 class ConfirmationSettings:
     destructive_actions: tuple[str, ...] = ("note.delete", "remind.cancel")
 
@@ -26,6 +32,7 @@ class ConfirmationSettings:
 class AppSettings:
     storage: StorageSettings = field(default_factory=StorageSettings)
     runtime: RuntimeSettings = field(default_factory=RuntimeSettings)
+    session: SessionSettings = field(default_factory=SessionSettings)
     confirmation: ConfirmationSettings = field(default_factory=ConfirmationSettings)
 
 
@@ -38,6 +45,7 @@ def load_settings(base_dir: str | Path) -> AppSettings:
     raw = tomllib.loads(config_path.read_text(encoding="utf-8"))
     storage = raw.get("storage", {})
     runtime = raw.get("runtime", {})
+    session = raw.get("session", {})
     confirmation = raw.get("confirmation", {})
 
     return AppSettings(
@@ -48,6 +56,16 @@ def load_settings(base_dir: str | Path) -> AppSettings:
         ),
         runtime=RuntimeSettings(
             trace_path=runtime.get("trace_path", RuntimeSettings.trace_path),
+        ),
+        session=SessionSettings(
+            auto_persist_interactive=session.get(
+                "auto_persist_interactive",
+                SessionSettings.auto_persist_interactive,
+            ),
+            preview_message_limit=session.get(
+                "preview_message_limit",
+                SessionSettings.preview_message_limit,
+            ),
         ),
         confirmation=ConfirmationSettings(
             destructive_actions=tuple(
