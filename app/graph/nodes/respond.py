@@ -19,19 +19,19 @@ def respond(state: AgentState) -> AgentState:
         result = state["tool_result"]
         response = result.get("message", "操作完成。")
         if result.get("records"):
-            response = response + "\n" + _format_records(result["records"], result.get("display_keys", ()))
+            response = response + "\n" + _format_records(
+                result["records"],
+                result.get("display_keys", ()),
+            )
     else:
         response = (
             "当前是最小骨架版 personal agent。可用命令包括："
-            "note/remind/preference/file ingest/retrieve。"
+            "note/remind/preference/file ingest|list|show/retrieve。"
         )
 
     trace = append_trace(
         state,
         "respond_node",
-        {
-            "response_preview": response[:120],
-        },
+        {"response_preview": response[:120]},
     )
     return {"response": response, "trace": trace}
-

@@ -71,10 +71,18 @@ def _parse_preference(user_input: str) -> tuple[str, dict]:
 
 
 def _parse_file(user_input: str) -> tuple[str, dict]:
-    match = re.match(r"^file\s+ingest\s+(.+)$", user_input, flags=re.I)
+    match = re.match(r"^file\s+(ingest|list|show)\s*(.*)$", user_input, flags=re.I)
     if not match:
         return "unknown", {}
-    return "file_ingest", {"action": "ingest", "path": match.group(1).strip().strip('"')}
+    action = match.group(1).lower()
+    payload = match.group(2).strip()
+    if action == "ingest":
+        return "file_ingest", {"action": action, "path": payload.strip('"')}
+    if action == "list":
+        return "file_ingest", {"action": action}
+    if action == "show":
+        return "file_ingest", {"action": action, "id": int(payload)}
+    return "unknown", {}
 
 
 def _parse_retrieval(user_input: str) -> tuple[str, dict]:
@@ -110,10 +118,15 @@ def _parse_natural_language(user_input: str) -> tuple[str, dict]:
         content = user_input.replace("提醒我", "").replace("请提醒我", "").strip()
         return "remind", {"action": "add", "content": content or user_input, "due_at": None}
     if "偏好" in user_input and "设置" in user_input and "=" in user_input:
-        key, _, value = user_input.split("=", 1)
+        key, value = user_input.split("=", 1)
         return "preference", {"action": "set", "key": key.split()[-1].strip(), "value": value.strip()}
     if "笔记" in user_input and ("记" in user_input or "新增" in user_input):
-        payload = user_input.replace("记一条笔记", "").replace("记录笔记", "").replace("新增笔记", "").strip("：: ")
+        payload = (
+            user_input.replace("记一条笔记", "")
+            .replace("记录笔记", "")
+            .replace("新增笔记", "")
+            .strip("：: ")
+        )
         title, content = _parse_kv_payload(payload or user_input)
         return "note", {"action": "add", "title": title, "content": content}
     if "搜索笔记" in user_input or "查笔记" in user_input:

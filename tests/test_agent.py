@@ -19,6 +19,7 @@ class PersonalAgentTestCase(unittest.TestCase):
             "data/uploads",
             "data/processed",
             "data/benchmarks",
+            "configs",
         ]:
             (self.base_dir / relative).mkdir(parents=True, exist_ok=True)
         self.agent = PersonalAgent(base_dir=self.base_dir)
@@ -28,44 +29,44 @@ class PersonalAgentTestCase(unittest.TestCase):
 
     def test_note_roundtrip(self) -> None:
         add_state = self.agent.invoke("note add 架构草案::先固定状态和边界")
-        self.assertIn("已创建笔记", add_state["response"])
+        self.assertEqual("架构草案", add_state["tool_result"]["records"][0]["title"])
 
         list_state = self.agent.invoke("note list")
-        self.assertIn("当前共有 1 条笔记", list_state["response"])
+        self.assertEqual(1, len(list_state["tool_result"]["records"]))
 
         search_state = self.agent.invoke("note search 状态")
-        self.assertIn("命中 1 条", search_state["response"])
+        self.assertEqual(1, len(search_state["tool_result"]["records"]))
 
     def test_reminder_flow(self) -> None:
-        self.agent.invoke("remind add 明天复盘架构")
+        self.agent.invoke("remind add 明天下午复盘架构")
         list_state = self.agent.invoke("remind list")
-        self.assertIn("当前共有 1 条提醒", list_state["response"])
+        self.assertEqual(1, len(list_state["tool_result"]["records"]))
 
         done_state = self.agent.invoke("remind done 1")
         self.assertIn("done", done_state["response"])
 
     def test_preference_flow(self) -> None:
         set_state = self.agent.invoke("preference set language=zh-CN")
-        self.assertIn("已设置偏好", set_state["response"])
+        self.assertEqual("language", set_state["tool_result"]["records"][0]["key"])
 
         get_state = self.agent.invoke("preference get language")
-        self.assertIn("存在", get_state["response"])
+        self.assertEqual("zh-CN", get_state["tool_result"]["records"][0]["value"])
 
     def test_file_ingest_and_retrieval(self) -> None:
         sample = self.base_dir / "sample.txt"
         sample.write_text("LangGraph 负责显式编排状态、节点与路由。", encoding="utf-8")
 
         ingest_state = self.agent.invoke(f'file ingest "{sample}"')
-        self.assertIn("文件已导入", ingest_state["response"])
+        self.assertEqual("sample.txt", ingest_state["tool_result"]["records"][0]["source_name"])
 
         retrieve_state = self.agent.invoke("retrieve LangGraph 负责什么")
-        self.assertIn("检索结果", retrieve_state["response"])
+        self.assertTrue(retrieve_state["retrieval_results"])
         self.assertEqual("sample.txt", retrieve_state["retrieval_results"][0]["source_name"])
 
     def test_retrieval_filter_by_file_id(self) -> None:
         first = self.base_dir / "first.txt"
         second = self.base_dir / "second.md"
-        first.write_text("Alpha 文档只讨论 LangGraph 状态。", encoding="utf-8")
+        first.write_text("Alpha 文档只讨论 LangGraph 状态图。", encoding="utf-8")
         second.write_text("Beta 文档只讨论提醒和偏好。", encoding="utf-8")
 
         self.agent.invoke(f'file ingest "{first}"')
@@ -98,6 +99,20 @@ class PersonalAgentTestCase(unittest.TestCase):
         self.assertTrue(filtered["retrieval_results"])
         self.assertTrue(all(item["media_type"] == "text/markdown" for item in filtered["retrieval_results"]))
 
+    def test_file_list_and_show(self) -> None:
+        sample = self.base_dir / "inventory.md"
+        sample.write_text("file inventory test", encoding="utf-8")
+
+        self.agent.invoke(f'file ingest "{sample}"')
+
+        list_state = self.agent.invoke("file list")
+        self.assertEqual(1, len(list_state["tool_result"]["records"]))
+        self.assertEqual("inventory.md", list_state["tool_result"]["records"][0]["source_name"])
+
+        show_state = self.agent.invoke("file show 1")
+        self.assertEqual(1, show_state["tool_result"]["records"][0]["id"])
+        self.assertIn("chunk_preview", show_state["response"])
+
     def test_trace_logging(self) -> None:
         state = self.agent.invoke("note add Trace::检查路径")
         self.assertTrue(state["trace"])
@@ -109,10 +124,10 @@ class PersonalAgentTestCase(unittest.TestCase):
 
         state = self.agent.invoke("note delete 1")
         self.assertTrue(state["awaiting_confirmation"])
-        self.assertIn("请输入 yes / no", state["response"])
+        self.assertIn("yes / no", state["response"])
 
         list_state = self.agent.invoke("note list")
-        self.assertIn("当前共有 1 条笔记", list_state["response"])
+        self.assertEqual(1, len(list_state["tool_result"]["records"]))
 
     def test_confirmation_yes_executes_delete(self) -> None:
         self.agent.invoke("note add 待删除::阶段2确认节点")
@@ -124,10 +139,10 @@ class PersonalAgentTestCase(unittest.TestCase):
 
         confirm_state = self.agent.invoke("yes", session=session)
         self.assertFalse(confirm_state["awaiting_confirmation"])
-        self.assertIn("已删除笔记 #1", confirm_state["response"])
+        self.assertIn("#1", confirm_state["response"])
 
         list_state = self.agent.invoke("note list")
-        self.assertIn("当前共有 0 条笔记", list_state["response"])
+        self.assertEqual([], list_state["tool_result"]["records"])
 
     def test_confirmation_no_cancels_delete(self) -> None:
         self.agent.invoke("note add 保留::取消删除")
@@ -141,7 +156,7 @@ class PersonalAgentTestCase(unittest.TestCase):
         self.assertIn("已取消", cancel_state["response"])
 
         list_state = self.agent.invoke("note list")
-        self.assertIn("当前共有 1 条笔记", list_state["response"])
+        self.assertEqual(1, len(list_state["tool_result"]["records"]))
 
     def test_invalid_confirmation_keeps_pending_action(self) -> None:
         self.agent.invoke("note add 保留::无效确认")
@@ -152,7 +167,31 @@ class PersonalAgentTestCase(unittest.TestCase):
 
         invalid_state = self.agent.invoke("maybe later", session=session)
         self.assertTrue(invalid_state["awaiting_confirmation"])
-        self.assertIn("请输入 yes / no", invalid_state["response"])
+        self.assertIn("yes / no", invalid_state["response"])
+
+    def test_confirmation_policy_can_require_note_update(self) -> None:
+        settings_path = self.base_dir / "configs" / "settings.toml"
+        settings_path.write_text(
+            """
+[storage]
+sqlite_path = "data/processed/personal_agent.db"
+milvus_path = "data/processed/personal_agent_milvus.db"
+upload_dir = "data/uploads"
+
+[runtime]
+trace_path = "data/benchmarks/trace.log"
+
+[confirmation]
+destructive_actions = ["note.update", "remind.cancel"]
+""".strip(),
+            encoding="utf-8",
+        )
+        agent = PersonalAgent(base_dir=self.base_dir)
+        agent.invoke("note add 配置化::确认策略")
+
+        state = agent.invoke("note update 1 配置化::更新后需要确认")
+        self.assertTrue(state["awaiting_confirmation"])
+        self.assertIn("note.update", state["pending_action"]["prompt"])
 
     def test_interactive_cli_slash_commands(self) -> None:
         with (

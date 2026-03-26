@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from typing import Any, TypedDict
 from pathlib import Path
+from typing import Any, TypedDict
 from uuid import uuid4
 
 from app.graph.builder import build_graph
 from app.observability.tracer import TraceLogger
 from app.retrieval.service import RetrievalService
+from app.settings import load_settings, resolve_path
 from app.storage.db import SQLiteStorage
 from app.storage.files import FileStorage
 from app.storage.vector_store import MilvusLiteStore
@@ -22,19 +23,28 @@ class AgentSession(TypedDict, total=False):
 class PersonalAgent:
     def __init__(self, base_dir: str | Path | None = None) -> None:
         self.base_dir = Path(base_dir) if base_dir else Path(__file__).resolve().parents[2]
-        self.data_dir = self.base_dir / "data"
-        self.sqlite_storage = SQLiteStorage(self.data_dir / "processed" / "personal_agent.db")
-        self.file_storage = FileStorage(self.data_dir / "uploads")
-        self.vector_store = MilvusLiteStore(self.data_dir / "processed" / "personal_agent_milvus.db")
+        self.settings = load_settings(self.base_dir)
+        self.sqlite_storage = SQLiteStorage(
+            resolve_path(self.base_dir, self.settings.storage.sqlite_path)
+        )
+        self.file_storage = FileStorage(
+            resolve_path(self.base_dir, self.settings.storage.upload_dir)
+        )
+        self.vector_store = MilvusLiteStore(
+            resolve_path(self.base_dir, self.settings.storage.milvus_path)
+        )
         self.retrieval_service = RetrievalService()
         self.tool_registry = ToolRegistry(
             sqlite_storage=self.sqlite_storage,
             file_storage=self.file_storage,
             vector_store=self.vector_store,
             retrieval_service=self.retrieval_service,
+            destructive_actions=self.settings.confirmation.destructive_actions,
         )
         self.graph = build_graph(self.tool_registry)
-        self.tracer = TraceLogger(self.data_dir / "benchmarks" / "trace.log")
+        self.tracer = TraceLogger(
+            resolve_path(self.base_dir, self.settings.runtime.trace_path)
+        )
 
     def new_session(self, *, show_trace: bool = False) -> AgentSession:
         return {
@@ -62,7 +72,9 @@ class PersonalAgent:
         messages.append({"role": "assistant", "content": final_state.get("response", "")})
         return {
             "messages": messages,
-            "pending_confirmation": final_state.get("pending_action") if final_state.get("awaiting_confirmation") else None,
+            "pending_confirmation": final_state.get("pending_action")
+            if final_state.get("awaiting_confirmation")
+            else None,
             "show_trace": session.get("show_trace", False),
         }
 
@@ -83,6 +95,8 @@ class PersonalAgent:
             "trace": [],
         }
         final_state = self.graph.invoke(initial_state)
-        final_state["session"] = self._build_next_session(normalized_session, user_input, final_state)
+        final_state["session"] = self._build_next_session(
+            normalized_session, user_input, final_state
+        )
         self.tracer.log(final_state)
         return final_state

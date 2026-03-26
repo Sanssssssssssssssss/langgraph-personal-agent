@@ -12,7 +12,7 @@
 
 ## D-003 存储边界使用 SQLite + Milvus Lite + 文件系统
 - 日期：2026-03-25
-- 决策：结构化数据进 SQLite，向量进 Milvus Lite，原始文件进 `data/uploads`
+- 决策：结构化数据进 SQLite，向量进 Milvus Lite 兼容层，原始文件进 `data/uploads`
 - 原因：职责清晰，便于逐步替换和调试
 
 ## D-004 文档主语言中文，代码与命名英文
@@ -49,3 +49,13 @@
 - 日期：2026-03-26
 - 决策：文件导入时自动记录 `file_id`、`source_name`、`extension`、`media_type`，检索时先做向量召回，再在本地按 metadata 过滤
 - 原因：这是当前最稳妥的阶段 2 下一刀，能先把检索控制能力补齐，又不要求立刻重做向量存储结构
+
+## D-011 destructive 确认策略改为配置驱动
+- 日期：2026-03-26
+- 决策：destructive 操作范围从工具层硬编码切换为 `configs/settings.toml` 配置驱动，默认值仍为 `note.delete` 和 `remind.cancel`
+- 原因：阶段 2 继续推进时，需要在不改代码的情况下调整确认范围，保证策略扩展比节点扩展更轻量
+
+## D-012 增加 file list / file show 作为 retrieval filter 配套入口
+- 日期：2026-03-26
+- 决策：在保留 `file ingest` 的前提下，新增 `file list` 和 `file show <id>` 命令
+- 原因：只有 `retrieve ... | filter:file_id=...` 还不够可用，用户需要先看到已导入文件和对应元数据，filter 能力才真正可用

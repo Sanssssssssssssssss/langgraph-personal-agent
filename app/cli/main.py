@@ -16,6 +16,11 @@ HELP_TEXT = """交互式 CLI 命令：
 确认回复：
 - 确认：yes / y / confirm / 是 / 确认
 - 取消：no / n / cancel / 否 / 取消
+
+文件命令：
+- file ingest <path>
+- file list
+- file show <id>
 """
 
 

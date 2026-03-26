@@ -1,0 +1,44 @@
+版本：v0.3.0
+日期：2026-03-26
+
+本次完成内容
+- 将 destructive 确认策略从硬编码迁移到 `configs/settings.toml`
+- 新增 `file list` / `file show <id>`，让 retrieval filter 更容易使用
+- 新增 `app/settings.py`，统一加载运行配置
+- 更新 README 和长期记忆文件，保持项目状态同步
+- 补齐配置化确认策略与文件清单相关测试
+
+主要更新文件
+- `app/settings.py`
+  - 新增 TOML 配置加载和路径解析
+- `app/services/agent.py`
+  - 改为从配置文件初始化存储路径、trace 路径、确认策略
+- `app/tools/registry.py`
+  - destructive 确认策略改为配置驱动
+  - 新增 `file list` / `file show`
+- `app/storage/db.py`
+  - 新增文件列表、文件详情、文件分片预览查询
+- `app/graph/nodes/intent.py`
+  - 支持 `file list` / `file show`
+- `app/graph/nodes/confirmation.py`
+  - 规范确认提示和确认词
+- `app/graph/nodes/respond.py`
+  - 调整默认响应文案
+- `configs/settings.toml`
+  - 新增实际运行配置文件
+- `configs/settings.example.toml`
+  - 同步确认策略配置示例
+- `tests/test_agent.py`
+  - 新增文件清单和确认策略配置测试
+- `README.md`
+  - 更新命令、配置和使用说明
+- `PROJECT_BRIEF.md`
+- `REQUIREMENTS.md`
+- `ARCHITECTURE.md`
+- `DECISIONS.md`
+- `TASKS.md`
+- `STATE.md`
+
+备注
+- 当前确认策略默认仍为 `note.delete` 和 `remind.cancel`
+- 若后续需要把 `note.update` 或其他写操作纳入确认，只需修改 `configs/settings.toml`

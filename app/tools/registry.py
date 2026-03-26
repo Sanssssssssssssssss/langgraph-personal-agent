@@ -10,10 +10,10 @@ from app.storage.vector_store import MilvusLiteStore
 
 
 class ToolRegistry:
-    DESTRUCTIVE_ACTIONS = {
-        ("note", "delete"),
-        ("remind", "cancel"),
-    }
+    DEFAULT_DESTRUCTIVE_ACTIONS = (
+        "note.delete",
+        "remind.cancel",
+    )
 
     def __init__(
         self,
@@ -21,11 +21,13 @@ class ToolRegistry:
         file_storage: FileStorage,
         vector_store: MilvusLiteStore,
         retrieval_service: RetrievalService,
+        destructive_actions: tuple[str, ...] | list[str] | set[str] | None = None,
     ) -> None:
         self.sqlite_storage = sqlite_storage
         self.file_storage = file_storage
         self.vector_store = vector_store
         self.retrieval_service = retrieval_service
+        self.destructive_actions = set(destructive_actions or self.DEFAULT_DESTRUCTIVE_ACTIONS)
 
     def execute(self, tool_name: str, args: dict[str, Any]) -> dict[str, Any]:
         handlers = {
@@ -40,22 +42,17 @@ class ToolRegistry:
         return handlers[tool_name](args)
 
     def requires_confirmation(self, tool_name: str, args: dict[str, Any]) -> bool:
-        return (tool_name, args.get("action")) in self.DESTRUCTIVE_ACTIONS
+        return self._action_key(tool_name, args.get("action")) in self.destructive_actions
 
-    def build_pending_action(self, tool_name: str, args: dict[str, Any]) -> dict[str, Any] | None:
+    def build_pending_action(
+        self,
+        tool_name: str,
+        args: dict[str, Any],
+    ) -> dict[str, Any] | None:
         if not self.requires_confirmation(tool_name, args):
             return None
 
-        action = args.get("action")
-        if tool_name == "note" and action == "delete":
-            note_id = args["id"]
-            description = f"删除笔记 #{note_id}"
-        elif tool_name == "remind" and action == "cancel":
-            reminder_id = args["id"]
-            description = f"取消提醒 #{reminder_id}"
-        else:
-            description = f"执行 {tool_name}.{action}"
-
+        description = self._build_action_description(tool_name, args.get("action"), args)
         prompt = f"即将{description}。请输入 yes / no（或 确认 / 取消）。"
         return {
             "tool": tool_name,
@@ -63,6 +60,23 @@ class ToolRegistry:
             "prompt": prompt,
             "cancel_message": f"已取消：{description}。",
         }
+
+    def _action_key(self, tool_name: str, action: str | None) -> str:
+        return f"{tool_name}.{action}" if action else tool_name
+
+    def _build_action_description(
+        self,
+        tool_name: str,
+        action: str | None,
+        args: dict[str, Any],
+    ) -> str:
+        if tool_name == "note" and action == "delete":
+            return f"删除笔记 #{args['id']}"
+        if tool_name == "remind" and action == "cancel":
+            return f"取消提醒 #{args['id']}"
+        if tool_name == "note" and action == "update":
+            return f"执行 note.update（笔记 #{args['id']}）"
+        return f"执行 {tool_name}.{action}"
 
     def _handle_note(self, args: dict[str, Any]) -> dict[str, Any]:
         action = args["action"]
@@ -138,7 +152,13 @@ class ToolRegistry:
                 "message": f"提醒 #{reminder['id']} 已标记为 {reminder['status']}。",
                 "records": [reminder],
                 "display_keys": ("id", "content", "status", "due_at"),
-                "memory_ops": [{"kind": "reminder_update", "id": reminder["id"], "status": reminder["status"]}],
+                "memory_ops": [
+                    {
+                        "kind": "reminder_update",
+                        "id": reminder["id"],
+                        "status": reminder["status"],
+                    }
+                ],
             }
         raise ValueError(f"Unsupported reminder action: {action}")
 
@@ -176,6 +196,56 @@ class ToolRegistry:
         raise ValueError(f"Unsupported preference action: {action}")
 
     def _handle_file_ingest(self, args: dict[str, Any]) -> dict[str, Any]:
+        action = args["action"]
+        if action == "list":
+            files = self.sqlite_storage.list_files()
+            return {
+                "status": "success",
+                "message": f"当前共有 {len(files)} 个已导入文件。",
+                "records": files,
+                "display_keys": (
+                    "id",
+                    "source_name",
+                    "extension",
+                    "media_type",
+                    "chunk_count",
+                    "created_at",
+                ),
+                "memory_ops": [{"kind": "file_list", "count": len(files)}],
+            }
+        if action == "show":
+            file_record = self.sqlite_storage.get_file(args["id"])
+            preview_chunks = self.sqlite_storage.list_file_chunks(args["id"], limit=3)
+            message_lines = [
+                f"文件 #{file_record['id']} 详情。",
+                f"- source_name={file_record.get('source_name')}",
+                f"- extension={file_record.get('extension')}",
+                f"- media_type={file_record.get('media_type')}",
+                f"- chunk_count={file_record.get('chunk_count')}",
+            ]
+            if preview_chunks:
+                message_lines.append("- chunk_preview:")
+                for chunk in preview_chunks:
+                    message_lines.append(
+                        f"  - chunk_index={chunk['chunk_index']} text={chunk['text'][:80]}"
+                    )
+            return {
+                "status": "success",
+                "message": "\n".join(message_lines),
+                "records": [file_record],
+                "display_keys": (
+                    "id",
+                    "source_name",
+                    "extension",
+                    "media_type",
+                    "chunk_count",
+                    "created_at",
+                ),
+                "memory_ops": [{"kind": "file_show", "id": file_record["id"]}],
+            }
+        if action != "ingest":
+            raise ValueError(f"Unsupported file action: {action}")
+
         source_path = Path(args["path"]).expanduser().resolve()
         stored = self.file_storage.store_file(source_path)
         text = self.file_storage.extract_text(stored["stored_path"])

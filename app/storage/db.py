@@ -85,16 +85,30 @@ class SQLiteStorage:
             self._ensure_column(conn, "files", "source_name", "TEXT")
             self._ensure_column(conn, "files", "extension", "TEXT")
 
-    def _ensure_column(self, conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
-        existing = {
-            row["name"]
-            for row in conn.execute(f"PRAGMA table_info({table})").fetchall()
-        }
+    def _ensure_column(
+        self,
+        conn: sqlite3.Connection,
+        table: str,
+        column: str,
+        definition: str,
+    ) -> None:
+        existing = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
         if column not in existing:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
     def _now(self) -> str:
         return datetime.now(UTC).isoformat()
+
+    def _normalize_file_record(self, row: sqlite3.Row | dict | None) -> dict | None:
+        if row is None:
+            return None
+        record = dict(row)
+        original_path = record.get("original_path") or record.get("stored_path") or ""
+        if original_path:
+            path = Path(original_path)
+            record["source_name"] = record.get("source_name") or path.name
+            record["extension"] = record.get("extension") or path.suffix
+        return record
 
     def create_note(self, title: str, content: str) -> dict:
         now = self._now()
@@ -217,11 +231,32 @@ class SQLiteStorage:
                 INSERT INTO files(original_path, stored_path, source_name, extension, media_type, checksum, chunk_count, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (original_path, stored_path, source_name, extension, media_type, checksum, chunk_count, self._now()),
+                (
+                    original_path,
+                    stored_path,
+                    source_name,
+                    extension,
+                    media_type,
+                    checksum,
+                    chunk_count,
+                    self._now(),
+                ),
             )
             file_id = cursor.lastrowid
             row = conn.execute("SELECT * FROM files WHERE id = ?", (file_id,)).fetchone()
             return dict(row)
+
+    def get_file(self, file_id: int) -> dict:
+        with self._managed_connection() as conn:
+            row = conn.execute("SELECT * FROM files WHERE id = ?", (file_id,)).fetchone()
+            if row is None:
+                raise ValueError(f"File {file_id} not found")
+            return self._normalize_file_record(row) or {}
+
+    def list_files(self) -> list[dict]:
+        with self._managed_connection() as conn:
+            rows = conn.execute("SELECT * FROM files ORDER BY created_at DESC").fetchall()
+            return [self._normalize_file_record(row) or {} for row in rows]
 
     def upsert_file_chunks(
         self,
@@ -250,7 +285,17 @@ class SQLiteStorage:
                         media_type = excluded.media_type,
                         text = excluded.text
                     """,
-                    (chunk_id, file_id, chunk_index, source_path, source_name, extension, media_type, text, now),
+                    (
+                        chunk_id,
+                        file_id,
+                        chunk_index,
+                        source_path,
+                        source_name,
+                        extension,
+                        media_type,
+                        text,
+                        now,
+                    ),
                 )
                 records.append(
                     {
@@ -270,3 +315,16 @@ class SQLiteStorage:
         with self._managed_connection() as conn:
             row = conn.execute("SELECT * FROM file_chunks WHERE id = ?", (chunk_id,)).fetchone()
             return dict(row) if row else None
+
+    def list_file_chunks(self, file_id: int, limit: int = 3) -> list[dict]:
+        with self._managed_connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT * FROM file_chunks
+                WHERE file_id = ?
+                ORDER BY chunk_index ASC
+                LIMIT ?
+                """,
+                (file_id, limit),
+            ).fetchall()
+            return [dict(row) for row in rows]

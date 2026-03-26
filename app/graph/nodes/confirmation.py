@@ -79,13 +79,12 @@ def handle_confirmation(state: AgentState, tool_registry: ToolRegistry) -> Agent
             "trace": trace,
         }
 
-    pending_action = tool_registry.build_pending_action(state["selected_tool"], state.get("tool_args", {}))
+    pending_action = tool_registry.build_pending_action(
+        state["selected_tool"],
+        state.get("tool_args", {}),
+    )
     if pending_action is None:
-        trace = append_trace(
-            state,
-            "confirmation_node",
-            {"status": "noop"},
-        )
+        trace = append_trace(state, "confirmation_node", {"status": "noop"})
         return {"trace": trace}
 
     trace = append_trace(
@@ -111,4 +110,3 @@ def route_after_confirmation(state: AgentState) -> str:
     if state.get("confirmation_response") == "confirmed":
         return "tool_node"
     return "respond_node"
-

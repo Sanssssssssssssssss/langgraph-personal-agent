@@ -3,10 +3,10 @@
 ## Todo
 - 引入真实 embedding 模型替换哈希 embedding
 - 设计 FastAPI 接入层
-- 扩展 destructive 确认策略到可配置层
 - 评估会话历史持久化方案
 - 增加更复杂的 retrieval filter 语法和 metadata 策略
 - 评估 metadata filter 下的召回-过滤顺序优化
+- 增加 file metadata 的更多可视化与排序能力
 
 ## In Progress
 - 无
@@ -32,6 +32,9 @@
 - 通过阶段 2 第一刀的确认流与 REPL 测试
 - 增加 retrieval metadata/filter 最小能力
 - 通过 file_id / extension / media_type 过滤检索测试
+- 将 destructive 确认策略切换到配置层
+- 增加 `file list` / `file show` 命令
+- 为确认策略配置和文件清单补齐测试、README、配置文件与版本日志
 
 ## Blocked
 - 无
