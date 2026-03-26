@@ -22,7 +22,7 @@
 - Reminders：`id`、`content`、`status`、`due_at`、`created_at`、`updated_at`
 - Preferences：`key`、`value`、`updated_at`
 - Files：`id`、`original_path`、`stored_path`、`media_type`、`checksum`、`chunk_count`、`created_at`
-- Retrieval Chunks：`id`、`file_id`、`chunk_index`、`text`、`source_path`、`vector`
+- Retrieval Chunks：`id`、`file_id`、`chunk_index`、`text`、`source_path`、`source_name`、`extension`、`media_type`、`vector`
 
 ## LangGraph 主图
 - `detect_intent`：解析用户输入并写入 state
@@ -60,11 +60,17 @@
 - 存储实现与工具调用解耦
 - 检索链路后续可替换 embedding、reranker、hybrid retrieval
 - destructive 确认优先在 graph state 中表达，不放在 CLI 层硬编码执行逻辑
+- retrieval 先做“向量召回 + 本地 metadata 过滤”的最小实现，后续再演进到更复杂 filter/metadata pipeline
 
 ## CLI 会话原则
 - 单次模式与交互模式共用同一个 `PersonalAgent.invoke(...)` 接口
 - 交互式会话消息只保留在当前终端内存，不写入 SQLite
 - slash 命令只在 CLI 层处理，不进入 graph
+
+## Retrieval Metadata 原则
+- 文件导入时自动提取并保存 `source_name`、`extension`、`media_type`
+- 检索时先向量召回，再用 chunk/file metadata 做本地过滤
+- 过滤字段第一版固定为 `file_id`、`source_name`、`extension`、`media_type`
 
 ## 调试原则
 - 每次请求记录 request_id

@@ -183,21 +183,37 @@ class ToolRegistry:
         file_record = self.sqlite_storage.create_file(
             original_path=str(source_path),
             stored_path=stored["stored_path"],
+            source_name=stored["source_name"],
+            extension=stored["extension"],
             media_type=stored["media_type"],
             checksum=stored["checksum"],
             chunk_count=len(chunks),
+        )
+        self.sqlite_storage.upsert_file_chunks(
+            file_id=file_record["id"],
+            source_path=stored["stored_path"],
+            source_name=stored["source_name"],
+            extension=stored["extension"],
+            media_type=stored["media_type"],
+            chunks=chunks,
         )
         self.vector_store.upsert_file_chunks(file_record["id"], stored["stored_path"], chunks)
         return {
             "status": "success",
             "message": f"文件已导入 #{file_record['id']}，共 {len(chunks)} 个分片。",
             "records": [file_record],
-            "display_keys": ("id", "original_path", "chunk_count", "created_at"),
+            "display_keys": ("id", "source_name", "extension", "chunk_count", "created_at"),
             "memory_ops": [{"kind": "file_ingest", "id": file_record["id"], "chunks": len(chunks)}],
         }
 
     def _handle_retrieval(self, args: dict[str, Any]) -> dict[str, Any]:
-        results = self.retrieval_service.retrieve(args["query"], self.vector_store)
+        filters = args.get("filters", {})
+        results = self.retrieval_service.retrieve(
+            args["query"],
+            self.vector_store,
+            self.sqlite_storage,
+            filters=filters,
+        )
         if not results:
             return {
                 "status": "success",
@@ -205,8 +221,13 @@ class ToolRegistry:
                 "results": [],
             }
         lines = ["检索结果："]
+        if filters:
+            lines.append(f"- filters={filters}")
         for item in results:
-            lines.append(f"- file_id={item['file_id']} score={item['score']:.4f} text={item['text'][:80]}")
+            lines.append(
+                f"- file_id={item['file_id']} source_name={item.get('source_name')} "
+                f"extension={item.get('extension')} score={item['score']:.4f} text={item['text'][:80]}"
+            )
         return {
             "status": "success",
             "message": "\n".join(lines),

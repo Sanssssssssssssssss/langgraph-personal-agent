@@ -25,6 +25,8 @@ class FileStorage:
             "stored_path": str(target),
             "checksum": checksum,
             "media_type": media_type,
+            "source_name": source.name,
+            "extension": source.suffix.lower(),
         }
 
     def extract_text(self, stored_path: str | Path) -> str:
@@ -37,4 +39,3 @@ class FileStorage:
             pages = [page.extract_text() or "" for page in reader.pages]
             return "\n".join(pages)
         raise ValueError(f"Unsupported file type: {suffix}")
-

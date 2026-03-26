@@ -10,6 +10,7 @@
 7. 交互入口：第一版提供 CLI
 8. 交互式终端：支持 REPL 会话模式和 slash 命令
 9. 高风险写操作确认：对 destructive 操作先提示确认再执行
+10. 检索 metadata/filter：导入文件后保留最小元数据，并支持按元数据过滤检索结果
 
 ## 非功能需求
 - 状态显式可调试
@@ -27,6 +28,7 @@
 - 当前阶段优先保证可运行、可排错、可扩展
 - 在进入阶段 2 之前，先保证 VS Code 本地开发环境可一键启动
 - 当前 destructive 确认范围仅包含 `note delete` 和 `remind cancel`
+- 当前 retrieval filter 第一版仅覆盖 `file_id`、`source_name`、`extension`、`media_type`
 
 ## 验收标准
 - 能完成最小多步任务
@@ -36,6 +38,7 @@
 - 重启后 SQLite 数据仍可读取
 - 交互式 CLI 能保留当前终端内的会话状态和待确认动作
 - destructive 操作未确认前不得执行
+- `retrieve` 能按 metadata 过滤结果，并在结果中回显过滤条件
 
 ## 缺失信息与当前假设
 - 仓库名默认 `langgraph-personal-agent`

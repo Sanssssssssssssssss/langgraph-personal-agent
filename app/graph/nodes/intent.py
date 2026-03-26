@@ -81,7 +81,27 @@ def _parse_retrieval(user_input: str) -> tuple[str, dict]:
     match = re.match(r"^retrieve\s+(.+)$", user_input, flags=re.I)
     if not match:
         return "unknown", {}
-    return "retrieval", {"query": match.group(1).strip()}
+    payload = match.group(1).strip()
+    query, filters = _split_retrieval_payload(payload)
+    return "retrieval", {"query": query, "filters": filters}
+
+
+def _split_retrieval_payload(payload: str) -> tuple[str, dict]:
+    query = payload
+    filters: dict[str, str | int] = {}
+    if "| filter:" not in payload:
+        return query, filters
+
+    query, _, raw_filters = payload.partition("| filter:")
+    query = query.strip()
+    for part in raw_filters.split(","):
+        key, _, value = part.strip().partition("=")
+        key = key.strip()
+        value = value.strip().strip('"')
+        if not key or not value:
+            continue
+        filters[key] = int(value) if key == "file_id" and value.isdigit() else value
+    return query, filters
 
 
 def _parse_natural_language(user_input: str) -> tuple[str, dict]:

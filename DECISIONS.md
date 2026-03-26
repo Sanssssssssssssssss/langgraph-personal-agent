@@ -44,3 +44,8 @@
 - 日期：2026-03-26
 - 决策：交互式 CLI 的 `messages` 和 `pending_confirmation` 只保留在当前 REPL 进程，不做持久化恢复
 - 原因：先把会话骨架和确认流跑通，避免过早扩展到历史恢复和会话存储
+
+## D-010 retrieval filter 第一版采用自动 metadata + 本地过滤
+- 日期：2026-03-26
+- 决策：文件导入时自动记录 `file_id`、`source_name`、`extension`、`media_type`，检索时先做向量召回，再在本地按 metadata 过滤
+- 原因：这是当前最稳妥的阶段 2 下一刀，能先把检索控制能力补齐，又不要求立刻重做向量存储结构

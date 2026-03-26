@@ -1,11 +1,12 @@
 # TASKS
 
 ## Todo
-- 增加更细粒度的 retrieval metadata 和过滤能力
 - 引入真实 embedding 模型替换哈希 embedding
 - 设计 FastAPI 接入层
 - 扩展 destructive 确认策略到可配置层
 - 评估会话历史持久化方案
+- 增加更复杂的 retrieval filter 语法和 metadata 策略
+- 评估 metadata filter 下的召回-过滤顺序优化
 
 ## In Progress
 - 无
@@ -29,6 +30,8 @@
 - 增加交互式 CLI 会话模式
 - 为高风险写操作加入 graph 级确认节点
 - 通过阶段 2 第一刀的确认流与 REPL 测试
+- 增加 retrieval metadata/filter 最小能力
+- 通过 file_id / extension / media_type 过滤检索测试
 
 ## Blocked
 - 无

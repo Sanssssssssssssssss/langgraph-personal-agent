@@ -1,0 +1,24 @@
+Version: v0.2.1
+Date: 2026-03-26
+Title: retrieval_metadata_filter
+
+Completed:
+- Added automatic retrieval metadata capture during file ingest.
+- Added chunk metadata persistence for file_id, source_name, extension, and media_type.
+- Added retrieval filter support for file_id, source_name, extension, and media_type.
+- Added tests covering filtered retrieval behavior.
+
+Files Updated:
+- app/storage/files.py
+- app/storage/db.py
+- app/storage/vector_store.py
+- app/retrieval/service.py
+- app/tools/registry.py
+- app/graph/nodes/intent.py
+- app/graph/nodes/action.py
+- tests/test_agent.py
+- README.md, REQUIREMENTS.md, ARCHITECTURE.md, DECISIONS.md, TASKS.md, STATE.md
+
+Notes:
+- The current filter flow is vector recall first, then local metadata filtering.
+- Existing previously ingested data may need re-ingest if you want chunk-level metadata coverage for old records.

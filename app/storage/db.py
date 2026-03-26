@@ -60,13 +60,38 @@ class SQLiteStorage:
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     original_path TEXT NOT NULL,
                     stored_path TEXT NOT NULL,
+                    source_name TEXT,
+                    extension TEXT,
                     media_type TEXT NOT NULL,
                     checksum TEXT NOT NULL,
                     chunk_count INTEGER NOT NULL,
                     created_at TEXT NOT NULL
                 );
+
+                CREATE TABLE IF NOT EXISTS file_chunks (
+                    id INTEGER PRIMARY KEY,
+                    file_id INTEGER NOT NULL,
+                    chunk_index INTEGER NOT NULL,
+                    source_path TEXT NOT NULL,
+                    source_name TEXT,
+                    extension TEXT,
+                    media_type TEXT NOT NULL,
+                    text TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY(file_id) REFERENCES files(id)
+                );
                 """
             )
+            self._ensure_column(conn, "files", "source_name", "TEXT")
+            self._ensure_column(conn, "files", "extension", "TEXT")
+
+    def _ensure_column(self, conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
+        existing = {
+            row["name"]
+            for row in conn.execute(f"PRAGMA table_info({table})").fetchall()
+        }
+        if column not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
     def _now(self) -> str:
         return datetime.now(UTC).isoformat()
@@ -180,6 +205,8 @@ class SQLiteStorage:
         self,
         original_path: str,
         stored_path: str,
+        source_name: str,
+        extension: str,
         media_type: str,
         checksum: str,
         chunk_count: int,
@@ -187,11 +214,59 @@ class SQLiteStorage:
         with self._managed_connection() as conn:
             cursor = conn.execute(
                 """
-                INSERT INTO files(original_path, stored_path, media_type, checksum, chunk_count, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO files(original_path, stored_path, source_name, extension, media_type, checksum, chunk_count, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (original_path, stored_path, media_type, checksum, chunk_count, self._now()),
+                (original_path, stored_path, source_name, extension, media_type, checksum, chunk_count, self._now()),
             )
             file_id = cursor.lastrowid
             row = conn.execute("SELECT * FROM files WHERE id = ?", (file_id,)).fetchone()
             return dict(row)
+
+    def upsert_file_chunks(
+        self,
+        file_id: int,
+        source_path: str,
+        source_name: str,
+        extension: str,
+        media_type: str,
+        chunks: list[str],
+    ) -> list[dict]:
+        now = self._now()
+        records = []
+        with self._managed_connection() as conn:
+            for chunk_index, text in enumerate(chunks):
+                chunk_id = file_id * 100000 + chunk_index
+                conn.execute(
+                    """
+                    INSERT INTO file_chunks(id, file_id, chunk_index, source_path, source_name, extension, media_type, text, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET
+                        file_id = excluded.file_id,
+                        chunk_index = excluded.chunk_index,
+                        source_path = excluded.source_path,
+                        source_name = excluded.source_name,
+                        extension = excluded.extension,
+                        media_type = excluded.media_type,
+                        text = excluded.text
+                    """,
+                    (chunk_id, file_id, chunk_index, source_path, source_name, extension, media_type, text, now),
+                )
+                records.append(
+                    {
+                        "id": chunk_id,
+                        "file_id": file_id,
+                        "chunk_index": chunk_index,
+                        "source_path": source_path,
+                        "source_name": source_name,
+                        "extension": extension,
+                        "media_type": media_type,
+                        "text": text,
+                    }
+                )
+        return records
+
+    def get_file_chunk(self, chunk_id: int) -> dict | None:
+        with self._managed_connection() as conn:
+            row = conn.execute("SELECT * FROM file_chunks WHERE id = ?", (chunk_id,)).fetchone()
+            return dict(row) if row else None

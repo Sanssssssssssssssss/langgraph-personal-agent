@@ -36,14 +36,17 @@ def execute_tool(state: AgentState, tool_registry: ToolRegistry) -> AgentState:
 
 
 def execute_retrieval(state: AgentState, tool_registry: ToolRegistry) -> AgentState:
-    query = state.get("tool_args", {}).get("query", state["user_input"])
+    tool_args = state.get("tool_args", {})
+    query = tool_args.get("query", state["user_input"])
+    filters = tool_args.get("filters", {})
     try:
-        result = tool_registry.execute("retrieval", {"query": query})
+        result = tool_registry.execute("retrieval", {"query": query, "filters": filters})
         trace = append_trace(
             state,
             "retrieval_node",
             {
                 "query": query,
+                "filters": filters,
                 "hits": len(result.get("results", [])),
             },
         )
@@ -51,7 +54,7 @@ def execute_retrieval(state: AgentState, tool_registry: ToolRegistry) -> AgentSt
             "tool_result": result,
             "retrieval_results": result.get("results", []),
             "tool_calls": list(state.get("tool_calls", []))
-            + [{"tool": "retrieval", "args": {"query": query}, "status": result["status"]}],
+            + [{"tool": "retrieval", "args": {"query": query, "filters": filters}, "status": result["status"]}],
             "trace": trace,
         }
     except Exception as exc:
@@ -59,7 +62,6 @@ def execute_retrieval(state: AgentState, tool_registry: ToolRegistry) -> AgentSt
         trace = append_trace(
             state,
             "retrieval_node",
-            {"query": query, "status": "error", "error": str(exc)},
+            {"query": query, "filters": filters, "status": "error", "error": str(exc)},
         )
         return {"errors": errors, "trace": trace}
-

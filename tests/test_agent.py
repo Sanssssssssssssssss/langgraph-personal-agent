@@ -60,6 +60,43 @@ class PersonalAgentTestCase(unittest.TestCase):
 
         retrieve_state = self.agent.invoke("retrieve LangGraph 负责什么")
         self.assertIn("检索结果", retrieve_state["response"])
+        self.assertEqual("sample.txt", retrieve_state["retrieval_results"][0]["source_name"])
+
+    def test_retrieval_filter_by_file_id(self) -> None:
+        first = self.base_dir / "first.txt"
+        second = self.base_dir / "second.md"
+        first.write_text("Alpha 文档只讨论 LangGraph 状态。", encoding="utf-8")
+        second.write_text("Beta 文档只讨论提醒和偏好。", encoding="utf-8")
+
+        self.agent.invoke(f'file ingest "{first}"')
+        self.agent.invoke(f'file ingest "{second}"')
+
+        filtered = self.agent.invoke("retrieve 文档 | filter:file_id=2")
+        self.assertIn("filters={'file_id': 2}", filtered["response"])
+        self.assertTrue(filtered["retrieval_results"])
+        self.assertTrue(all(item["file_id"] == 2 for item in filtered["retrieval_results"]))
+
+    def test_retrieval_filter_by_extension(self) -> None:
+        sample_txt = self.base_dir / "extension_case.txt"
+        sample_md = self.base_dir / "extension_case.md"
+        sample_txt.write_text("文本文件里有 Alpha 检索内容。", encoding="utf-8")
+        sample_md.write_text("Markdown 文件里有 Alpha 检索内容。", encoding="utf-8")
+
+        self.agent.invoke(f'file ingest "{sample_txt}"')
+        self.agent.invoke(f'file ingest "{sample_md}"')
+
+        filtered = self.agent.invoke("retrieve Alpha | filter:extension=.md")
+        self.assertTrue(filtered["retrieval_results"])
+        self.assertTrue(all(item["extension"] == ".md" for item in filtered["retrieval_results"]))
+
+    def test_retrieval_filter_by_media_type(self) -> None:
+        sample = self.base_dir / "media_type_case.md"
+        sample.write_text("media type filter 文档。", encoding="utf-8")
+
+        self.agent.invoke(f'file ingest "{sample}"')
+        filtered = self.agent.invoke("retrieve filter | filter:media_type=text/markdown")
+        self.assertTrue(filtered["retrieval_results"])
+        self.assertTrue(all(item["media_type"] == "text/markdown" for item in filtered["retrieval_results"]))
 
     def test_trace_logging(self) -> None:
         state = self.agent.invoke("note add Trace::检查路径")

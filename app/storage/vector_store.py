@@ -109,6 +109,7 @@ class MilvusLiteStore:
                 entity = item.get("entity", {})
                 normalized.append(
                     {
+                        "id": item.get("id") or entity.get("id"),
                         "file_id": entity.get("file_id"),
                         "chunk_index": entity.get("chunk_index"),
                         "source_path": entity.get("source_path"),
@@ -124,6 +125,7 @@ class MilvusLiteStore:
             score = self._cosine_similarity(query_vector, item["vector"])
             scored.append(
                 {
+                    "id": item["id"],
                     "file_id": item["file_id"],
                     "chunk_index": item["chunk_index"],
                     "source_path": item["source_path"],
